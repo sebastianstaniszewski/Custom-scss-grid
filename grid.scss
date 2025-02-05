@@ -1,0 +1,169 @@
+$grid-breakpoints: (
+        xs: 0,
+        sm: 576px,
+        md: 768px,
+        lg: 992px,
+        xl: 1200px,
+) !default;
+$container-max-widths: (
+        xs: 100%,
+        sm: 540px,
+        md: 720px,
+        lg: 960px,
+        xl: 1140px,
+) !default;
+
+$colsCount: 12;
+
+:root {
+  --column-gap: 15px;
+}
+
+$gap: var(--column-gap);
+
+@function divide($dividend, $divisor, $precision: 10) {
+  $sign: if($dividend > 0 and $divisor > 0 or $dividend < 0 and $divisor < 0, 1, -1);
+  $dividend: abs($dividend);
+  $divisor: abs($divisor);
+  @if $dividend == 0 {
+    @return 0;
+  }
+  @if $divisor == 0 {
+    @error "Cannot divide by 0";
+  }
+  $remainder: $dividend;
+  $result: 0;
+  $factor: 10;
+  @while ($remainder > 0 and $precision >= 0) {
+    $quotient: 0;
+    @while ($remainder >= $divisor) {
+      $remainder: $remainder - $divisor;
+      $quotient: $quotient + 1;
+    }
+    $result: $result * 10 + $quotient;
+    $factor: $factor * .1;
+    $remainder: $remainder * 10;
+    $precision: $precision - 1;
+    @if ($precision < 0 and $remainder >= $divisor * 5) {
+      $result: $result + 1;
+    }
+  }
+  $result: $result * $factor * $sign;
+  $dividend-unit: unit($dividend);
+  $divisor-unit: unit($divisor);
+  $unit-map: (
+          "px": 1px,
+          "rem": 1rem,
+          "em": 1em,
+          "%": 1%
+  );
+  @if ($dividend-unit != $divisor-unit and map-has-key($unit-map, $dividend-unit)) {
+    $result: $result * map-get($unit-map, $dividend-unit);
+  }
+  @return $result;
+}
+
+@function get_next_breakpoint($breakpoint) {
+  $return_next: false;
+  @each $loop_breakpoint, $value in $grid-breakpoints {
+    @if $return_next {
+      @return $loop_breakpoint;
+    }
+    @if $breakpoint == $loop_breakpoint {
+      $return_next: true;
+    }
+  }
+  @return false;
+}
+
+@mixin media-breakpoint-down($breakpoint) {
+  $maxWidth: map-get($grid-breakpoints, get_next_breakpoint($breakpoint));
+  @if $maxWidth {
+    @media screen and (max-width: $maxWidth) {
+      @content;
+    }
+  } @else {
+    @content
+  }
+}
+
+@mixin media-breakpoint-up($breakpoint) {
+  @media screen and (min-width: map-get($grid-breakpoints, $breakpoint)) {
+    @content;
+  }
+}
+
+@mixin container {
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: $gap;
+  padding-right: $gap;
+  @each $breakpoint, $value in $container-max-widths {
+    @include media-breakpoint-up($breakpoint) {
+      max-width: $value;
+    }
+  }
+}
+
+@for $i from 1 through $colsCount {
+  .col-#{$i} {
+    width: #{100% / $colsCount * $i};
+    padding-left: $gap;
+    padding-right: $gap;
+  }
+  .order-#{$i} {
+    order: $i;
+  }
+}
+
+@each $breakpoint, $value in $grid-breakpoints {
+  @if $value != 0 {
+    @include media-breakpoint-up($breakpoint) {
+      @for $i from 1 through $colsCount {
+        .col-#{$breakpoint}-#{$i} {
+          width: #{100% / $colsCount * $i};
+          padding-left: $gap;
+          padding-right: $gap;
+        }
+
+        .order-#{$breakpoint}-#{$i} {
+          order: $i;
+        }
+      }
+    }
+  }
+}
+
+@each $breakpoint in map-keys($grid-breakpoints) {
+  @include media-breakpoint-up($breakpoint) {
+    @for $i from 0 through ($colsCount - 1) {
+      .offset-#{$breakpoint}-#{$i} {
+        $num: divide($i, $colsCount);
+        margin-left: if($num == 0, 0, percentage($num));
+      }
+    }
+  }
+}
+
+.container-fluid {
+  padding-left: $gap;
+  padding-right: $gap;
+}
+
+.container {
+  @include container;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  margin-left: calc(#{$gap} * -1);
+  margin-right: calc(#{$gap} * -1);
+}
+
+*, *::before, *::after {
+  -webkit-box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+}
